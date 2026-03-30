@@ -25,7 +25,7 @@
   --green:#27AE60; --green2:#D5F5E3;
   --bg:#F0F4FA; --card:#fff; --card2:#EEF3FA;
   --t1:#0D1B2A; --t2:#4A6080; --t3:#8FA3BC; --border:#D8E5F3;
-  --nav-h:60px;
+  --nav-h:56px;
   --safe-b:env(safe-area-inset-bottom, 0px);
   --safe-t:env(safe-area-inset-top, 0px);
 }
@@ -129,14 +129,11 @@ nav {
   background: var(--card);
   border-top: 1px solid var(--border);
   display: flex;
-  /* height = fixed nav + safe area */
-  height: calc(var(--nav-h) + var(--safe-b));
-  /* align buttons at top of nav, safe area fills bottom */
-  align-items: flex-start;
+  align-items: center;
   padding-top: 6px;
+  padding-bottom: max(var(--safe-b), 8px);
   box-shadow: 0 -2px 12px rgba(27,79,138,.08);
   z-index: 50;
-  flex-shrink: 0;
 }
 .nb {
   flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
@@ -632,6 +629,8 @@ async function doLoad(){
    RENDER
 ══════════════════════════════════════ */
 function render(){
+  // Debug: log column names to help diagnose field detection
+  if(rows.length>0) console.log('🔍 Colonnes détectées:', Object.keys(rows[0]));
   document.getElementById('hbar-sub').textContent = `${rows.length} collaborateurs · 2025–2026`;
   doKPI(); doMasse();
   doChCat(); doStatut(); doParite();
@@ -821,13 +820,23 @@ function doPyramid(){
     {l:'30-34',a:30,b:34},{l:'25-29',a:25,b:29},{l:'22-24',a:22,b:24}
   ];
 
-  // Cherche la colonne âge avec tous les noms possibles
+  // Cherche la colonne âge - ultra robuste aux accents et variantes
+  const AGE_KEYS = ['age','âge','ag','Âge','Age','AGE','a_ge'];
   const getAge = r => {
+    // Try exact normalized match first
     for(const key of Object.keys(r)){
-      const kn = norm(key);
-      if(kn==='age'||kn.endsWith('age')||kn.startsWith('age')){
+      const kn = key.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
+      if(kn==='age'||kn==='ag'){
         const v=n(r[key]);
-        if(v>10&&v<100) return v;
+        if(v>15&&v<80) return v;
+      }
+    }
+    // Fallback: any key containing 'age' or 'ag' with reasonable value
+    for(const key of Object.keys(r)){
+      const kn = key.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      if(kn.includes('age')||kn.includes('âge')){
+        const v=n(r[key]);
+        if(v>15&&v<80) return v;
       }
     }
     return 0;
@@ -1010,11 +1019,16 @@ function openProfile(idx){
   document.getElementById('m-name').textContent=`${prenom} ${nom}`;
   document.getElementById('m-role').textContent=`${poste}${service?' · '+service:''}`;
 
-  // Cherche âge robustement
+  // Cherche âge ultra robuste
   let age=0;
   for(const key of Object.keys(r)){
-    if(norm(key)==='age'||norm(key).endsWith('age')){
-      const v=n(r[key]); if(v>10&&v<100){age=v;break;}
+    const kn=key.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
+    if(kn==='age'||kn==='ag'){const v=n(r[key]);if(v>15&&v<80){age=v;break;}}
+  }
+  if(!age){
+    for(const key of Object.keys(r)){
+      const kn=key.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      if(kn.includes('age')||kn.includes('âge')){const v=n(r[key]);if(v>15&&v<80){age=v;break;}}
     }
   }
   const anc = n(g(r,'Anciennete','anciennet'));

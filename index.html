@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard RH — Clinique Saint-Lucas</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:#F4F7FB; --surface:#FFFFFF; --surface2:#EEF3FA;
+  --blue-deep:#1B4F8A; --blue-mid:#2E74C0; --blue-light:#5B9BD5; --blue-pale:#D6E6F7;
+  --teal:#17A589; --teal-light:#D1F0EA;
+  --amber:#E67E22; --amber-light:#FDE8D0;
+  --rose:#C0392B; --rose-light:#FADBD8;
+  --indigo:#5C6BC0; --indigo-light:#E3E5F7;
+  --text-primary:#0D1B2A; --text-secondary:#4A6080; --text-muted:#8FA3BC;
+  --border:#D8E5F3;
+  --shadow-sm:0 1px 4px rgba(27,79,138,.06);
+  --shadow-md:0 4px 20px rgba(27,79,138,.10);
+  --radius:16px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text-primary);min-height:100vh}
+
+/* ── Loader ── */
+#loader{
+  position:fixed;inset:0;background:#fff;z-index:9999;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;
+  transition:opacity .5s;
+}
+#loader.hidden{opacity:0;pointer-events:none}
+.loader-logo{
+  width:56px;height:56px;background:var(--blue-deep);border-radius:14px;
+  display:flex;align-items:center;justify-content:center;
+  animation:logoPulse 1.4s ease-in-out infinite;
+}
+@keyframes logoPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+.loader-bar{width:220px;height:4px;background:var(--blue-pale);border-radius:4px;overflow:hidden}
+.loader-bar-fill{height:100%;background:var(--blue-mid);border-radius:4px;animation:load 1.8s ease-in-out forwards}
+@keyframes load{from{width:0}to{width:100%}}
+.loader-text{font-size:13px;color:var(--text-muted);letter-spacing:.3px}
+
+/* ── Sidebar ── */
+.sidebar{
+  position:fixed;top:0;left:0;width:256px;height:100vh;
+  background:var(--blue-deep);display:flex;flex-direction:column;
+  padding:0 0 28px;z-index:100;
+  box-shadow:4px 0 24px rgba(27,79,138,.25);
+}
+.sidebar-logo{padding:28px 24px 24px;border-bottom:1px solid rgba(255,255,255,.1)}
+.logo-badge{
+  width:38px;height:38px;background:rgba(255,255,255,.15);border-radius:9px;
+  display:flex;align-items:center;justify-content:center;margin-bottom:12px;
+}
+.logo-badge svg{width:18px;height:18px}
+.sidebar-logo h1{font-family:'DM Serif Display',serif;font-size:16px;color:#fff;font-weight:400;line-height:1.35}
+.sidebar-logo p{font-size:10.5px;color:rgba(255,255,255,.45);letter-spacing:.5px;text-transform:uppercase;margin-top:3px}
+
+.sidebar-nav{padding:20px 14px;flex:1}
+.nav-section{font-size:9.5px;font-weight:600;letter-spacing:1.3px;text-transform:uppercase;color:rgba(255,255,255,.3);padding:0 10px;margin:18px 0 6px}
+.nav-item{
+  display:flex;align-items:center;gap:11px;
+  padding:9px 10px;border-radius:7px;
+  color:rgba(255,255,255,.6);font-size:13.5px;
+  cursor:pointer;transition:all .18s;margin-bottom:1px;
+}
+.nav-item:hover,.nav-item.active{background:rgba(255,255,255,.11);color:#fff}
+.nav-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.25);flex-shrink:0}
+.nav-item.active .nav-dot{background:#5B9BD5;box-shadow:0 0 6px rgba(91,155,213,.6)}
+
+.sidebar-bottom{padding:0 14px;border-top:1px solid rgba(255,255,255,.08);padding-top:18px}
+.user-card{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;border-radius:9px;background:rgba(255,255,255,.07);
+}
+.avatar{
+  width:34px;height:34px;border-radius:50%;
+  background:linear-gradient(135deg,#5B9BD5,#2E74C0);
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:600;color:#fff;flex-shrink:0;
+}
+.user-card .info p{font-size:13px;color:#fff;font-weight:500}
+.user-card .info span{font-size:11px;color:rgba(255,255,255,.4)}
+
+/* ── Main ── */
+.main{margin-left:256px;min-height:100vh;padding:36px 36px 60px}
+
+/* ── Topbar ── */
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:32px}
+.topbar h2{font-family:'DM Serif Display',serif;font-size:26px;font-weight:400}
+.topbar p{font-size:13px;color:var(--text-muted);margin-top:3px}
+.topbar-right{display:flex;gap:10px;align-items:center}
+.badge-live{
+  display:flex;align-items:center;gap:6px;
+  background:var(--teal-light);color:var(--teal);
+  font-size:12px;font-weight:600;padding:6px 13px;border-radius:20px;
+}
+.pulse{width:7px;height:7px;border-radius:50%;background:var(--teal);animation:pulse 1.8s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.3)}}
+.btn{
+  background:var(--blue-deep);color:#fff;border:none;
+  padding:8px 16px;border-radius:8px;
+  font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;
+  cursor:pointer;display:flex;align-items:center;gap:7px;transition:.2s;
+}
+.btn:hover{background:var(--blue-mid)}
+.btn-outline{
+  background:transparent;color:var(--blue-mid);
+  border:1.5px solid var(--blue-pale);
+}
+.btn-outline:hover{background:var(--blue-pale)}
+
+/* ── KPIs ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:18px;margin-bottom:26px}
+.kpi{
+  background:var(--surface);border-radius:var(--radius);
+  padding:22px 22px 18px;box-shadow:var(--shadow-sm);
+  border:1px solid var(--border);position:relative;overflow:hidden;
+  transition:box-shadow .25s,transform .25s;animation:fadeUp .4s both;
+}
+.kpi:hover{box-shadow:var(--shadow-md);transform:translateY(-2px)}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.kpi.c1::before{background:var(--blue-mid)}
+.kpi.c2::before{background:var(--teal)}
+.kpi.c3::before{background:var(--amber)}
+.kpi.c4::before{background:var(--indigo)}
+.kpi.c5::before{background:var(--rose)}
+
+.kpi-icon{
+  width:40px;height:40px;border-radius:9px;
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:14px;font-size:17px;
+}
+.kpi.c1 .kpi-icon{background:var(--blue-pale)}
+.kpi.c2 .kpi-icon{background:var(--teal-light)}
+.kpi.c3 .kpi-icon{background:var(--amber-light)}
+.kpi.c4 .kpi-icon{background:var(--indigo-light)}
+.kpi.c5 .kpi-icon{background:var(--rose-light)}
+
+.kpi-val{font-family:'DM Serif Display',serif;font-size:30px;line-height:1;margin-bottom:5px}
+.kpi-lbl{font-size:12.5px;color:var(--text-muted)}
+.kpi-tag{
+  margin-top:10px;display:inline-flex;align-items:center;gap:4px;
+  font-size:11px;font-weight:600;padding:3px 9px;border-radius:10px;
+}
+.kpi.c1 .kpi-tag{background:var(--blue-pale);color:var(--blue-mid)}
+.kpi.c2 .kpi-tag{background:var(--teal-light);color:var(--teal)}
+.kpi.c3 .kpi-tag{background:var(--amber-light);color:var(--amber)}
+.kpi.c4 .kpi-tag{background:var(--indigo-light);color:var(--indigo)}
+.kpi.c5 .kpi-tag{background:var(--rose-light);color:var(--rose)}
+
+/* ── Cards ── */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-bottom:22px}
+.grid3{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:22px;margin-bottom:22px}
+
+.card{
+  background:var(--surface);border-radius:var(--radius);
+  padding:26px;box-shadow:var(--shadow-sm);border:1px solid var(--border);
+  transition:box-shadow .25s;animation:fadeUp .5s both;
+}
+.card:hover{box-shadow:var(--shadow-md)}
+.card-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px}
+.card-title{font-family:'DM Serif Display',serif;font-size:17px;font-weight:400}
+.card-sub{font-size:12px;color:var(--text-muted);margin-top:2px}
+.tag{
+  font-size:11px;font-weight:600;padding:4px 11px;
+  border-radius:12px;background:var(--blue-pale);color:var(--blue-mid);
+  white-space:nowrap;
+}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── Salary bars ── */
+.sal-list{display:flex;flex-direction:column;gap:13px}
+.sal-row{}
+.sal-meta{display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px}
+.sal-name{color:var(--text-secondary)}
+.sal-amt{font-weight:600;color:var(--text-primary)}
+.bar-track{height:7px;background:var(--surface2);border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--blue-light),var(--blue-mid));width:0;transition:width 1.2s cubic-bezier(.4,0,.2,1)}
+
+/* ── Pyramid ── */
+.pyramid{display:flex;flex-direction:column;gap:5px;padding:4px 0}
+.py-row{display:flex;align-items:center;gap:8px;font-size:11.5px}
+.py-lbl{width:52px;text-align:right;color:var(--text-muted);flex-shrink:0}
+.py-bars{flex:1;display:flex;gap:4px}
+.py-side{flex:1;display:flex}
+.py-f{height:20px;border-radius:3px;background:linear-gradient(90deg,#E9AFCA,#C0559A);margin-left:auto;min-width:2px;transition:width 1.2s}
+.py-m{height:20px;border-radius:3px;background:linear-gradient(90deg,var(--blue-mid),var(--blue-light));min-width:2px;transition:width 1.2s}
+.py-count{width:26px;font-size:11px;color:var(--text-muted);flex-shrink:0}
+.py-legend{display:flex;gap:18px;justify-content:center;margin-top:14px;font-size:12px;color:var(--text-muted)}
+.py-legend span{display:flex;align-items:center;gap:5px}
+.dl{width:9px;height:9px;border-radius:50%;background:#C0559A}
+.dm{width:9px;height:9px;border-radius:50%;background:var(--blue-mid)}
+
+/* ── Donut legend ── */
+.dnut-wrap{display:flex;align-items:center;gap:28px;height:220px}
+.dnut-canvas{width:150px;flex-shrink:0}
+.dnut-legend{display:flex;flex-direction:column;gap:11px;flex:1}
+.dleg{display:flex;align-items:center;gap:9px;font-size:13px}
+.dleg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.dleg-lbl{color:var(--text-secondary);flex:1}
+.dleg-val{font-weight:600;color:var(--text-primary)}
+.dleg-pct{font-size:11px;color:var(--text-muted)}
+
+/* ── Table ── */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+thead th{
+  text-align:left;font-size:11px;font-weight:600;
+  letter-spacing:.8px;text-transform:uppercase;
+  color:var(--text-muted);padding:0 0 11px;
+  border-bottom:1px solid var(--border);
+}
+tbody tr{border-bottom:1px solid var(--surface2);transition:background .15s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--surface2)}
+td{padding:12px 0;font-size:13px;color:var(--text-secondary)}
+td:first-child{color:var(--text-primary);font-weight:500}
+.chip{display:inline-block;padding:3px 10px;border-radius:11px;font-size:11px;font-weight:600}
+.c-cdi{background:var(--teal-light);color:var(--teal)}
+.c-cdd{background:var(--amber-light);color:var(--amber)}
+.c-stage{background:var(--indigo-light);color:var(--indigo)}
+.stars{color:#F39C12;letter-spacing:1px}
+
+/* ── Search / Filter ── */
+.filter-bar{display:flex;gap:10px;margin-bottom:20px}
+.search-input{
+  flex:1;padding:9px 14px;border:1.5px solid var(--border);
+  border-radius:9px;font-family:'DM Sans',sans-serif;font-size:13px;
+  color:var(--text-primary);background:var(--surface);outline:none;
+  transition:.2s;
+}
+.search-input:focus{border-color:var(--blue-light);box-shadow:0 0 0 3px rgba(91,155,213,.15)}
+.filter-select{
+  padding:9px 12px;border:1.5px solid var(--border);border-radius:9px;
+  font-family:'DM Sans',sans-serif;font-size:13px;background:var(--surface);
+  color:var(--text-primary);outline:none;cursor:pointer;
+}
+
+/* ── Footer ── */
+.footer{
+  margin-top:36px;padding-top:20px;border-top:1px solid var(--border);
+  display:flex;justify-content:space-between;align-items:center;
+  font-size:12px;color:var(--text-muted);
+}
+.footer a{color:var(--blue-mid);text-decoration:none}
+
+/* ── Error ── */
+.error-banner{
+  background:#FFF3CD;border:1px solid #FFC107;border-radius:10px;
+  padding:14px 18px;margin-bottom:22px;font-size:13px;color:#856404;
+  display:none;
+}
+</style>
+</head>
+<body>
+
+<!-- Loader -->
+<div id="loader">
+  <div class="loader-logo">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="9" y="2" width="6" height="20" rx="2" fill="white"/>
+      <rect x="2" y="9" width="20" height="6" rx="2" fill="white"/>
+    </svg>
+  </div>
+  <div class="loader-bar"><div class="loader-bar-fill"></div></div>
+  <div class="loader-text">Chargement des données RH…</div>
+</div>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-badge">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+        <rect x="9" y="2" width="6" height="20" rx="2" fill="white"/>
+        <rect x="2" y="9" width="20" height="6" rx="2" fill="white"/>
+      </svg>
+    </div>
+    <h1>Clinique<br>Saint-Lucas</h1>
+    <p>Portail RH — Live</p>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">Tableaux de bord</div>
+    <div class="nav-item active"><span class="nav-dot"></span>Vue d'ensemble</div>
+    <div class="nav-item"><span class="nav-dot"></span>Effectifs</div>
+    <div class="nav-item"><span class="nav-dot"></span>Rémunérations</div>
+    <div class="nav-item"><span class="nav-dot"></span>Formations</div>
+    <div class="nav-section">Gestion</div>
+    <div class="nav-item"><span class="nav-dot"></span>Annuaire</div>
+    <div class="nav-item"><span class="nav-dot"></span>Recrutement</div>
+    <div class="nav-item"><span class="nav-dot"></span>Évaluations</div>
+    <div class="nav-section">Rapports</div>
+    <div class="nav-item"><span class="nav-dot"></span>Exports</div>
+    <div class="nav-item"><span class="nav-dot"></span>Paramètres</div>
+  </nav>
+  <div class="sidebar-bottom">
+    <div class="user-card">
+      <div class="avatar">DG</div>
+      <div class="info">
+        <p>Direction RH</p>
+        <span>Admin · 2025–2026</span>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- Main -->
+<main class="main">
+
+  <div class="topbar">
+    <div>
+      <h2>Vue d'ensemble RH</h2>
+      <p id="subtitle">Chargement…</p>
+    </div>
+    <div class="topbar-right">
+      <div class="badge-live"><span class="pulse"></span>Google Sheets Live</div>
+      <button class="btn btn-outline" onclick="loadData()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        Actualiser
+      </button>
+      <button class="btn" onclick="window.print()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Exporter PDF
+      </button>
+    </div>
+  </div>
+
+  <div class="error-banner" id="errorBanner">
+    ⚠️ Impossible de charger les données depuis Google Sheets. Vérifiez que le fichier est bien publié (Fichier → Publier sur le web → CSV). Les données affichées sont des données de démonstration.
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-grid">
+    <div class="kpi c1"><div class="kpi-icon">👥</div><div class="kpi-val" id="k-effectif">—</div><div class="kpi-lbl">Effectif total</div><div class="kpi-tag">Collaborateurs</div></div>
+    <div class="kpi c2"><div class="kpi-icon">💶</div><div class="kpi-val" id="k-salaire">—</div><div class="kpi-lbl">Salaire brut moyen</div><div class="kpi-tag">Mensuel</div></div>
+    <div class="kpi c3"><div class="kpi-icon">🏅</div><div class="kpi-val" id="k-anciennete">—</div><div class="kpi-lbl">Ancienneté moyenne</div><div class="kpi-tag">En années</div></div>
+    <div class="kpi c4"><div class="kpi-icon">⭐</div><div class="kpi-val" id="k-note">—</div><div class="kpi-lbl">Évaluation moyenne</div><div class="kpi-tag">Sur 5</div></div>
+    <div class="kpi c5"><div class="kpi-icon">💰</div><div class="kpi-val" id="k-bonus">—</div><div class="kpi-lbl">Bonus annuel moyen</div><div class="kpi-tag">Par employé</div></div>
+  </div>
+
+  <!-- Row 1 -->
+  <div class="grid2">
+    <div class="card">
+      <div class="card-head">
+        <div><div class="card-title">Répartition par catégorie</div><div class="card-sub">Nombre de collaborateurs</div></div>
+        <span class="tag">Effectifs</span>
+      </div>
+      <div style="position:relative;height:240px"><canvas id="chartCat"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <div><div class="card-title">Types de contrats</div><div class="card-sub">CDI · CDD · Stage</div></div>
+        <span class="tag">Contrats</span>
+      </div>
+      <div class="dnut-wrap">
+        <div class="dnut-canvas"><canvas id="chartStatut"></canvas></div>
+        <div class="dnut-legend" id="legStatut"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 2 -->
+  <div class="grid2">
+    <div class="card">
+      <div class="card-head">
+        <div><div class="card-title">Salaire moyen par service</div><div class="card-sub">Brut mensuel · Top 10</div></div>
+        <span class="tag">Rémunérations</span>
+      </div>
+      <div class="sal-list" id="salList"></div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <div><div class="card-title">Pyramide des âges</div><div class="card-sub">Femmes ← · → Hommes</div></div>
+        <span class="tag">Démographie</span>
+      </div>
+      <div class="pyramid" id="pyramid"></div>
+      <div class="py-legend">
+        <span><span class="dl"></span>Femmes</span>
+        <span><span class="dm"></span>Hommes</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 3 : Annuaire filtrable -->
+  <div class="card">
+    <div class="card-head">
+      <div><div class="card-title">Annuaire des collaborateurs</div><div class="card-sub" id="tableCount">—</div></div>
+      <span class="tag">Annuaire complet</span>
+    </div>
+    <div class="filter-bar">
+      <input class="search-input" id="searchInput" placeholder="🔍  Rechercher un nom, poste, service…" oninput="filterTable()">
+      <select class="filter-select" id="filterStatut" onchange="filterTable()">
+        <option value="">Tous contrats</option>
+        <option>CDI</option><option>CDD</option><option>Stage</option>
+      </select>
+      <select class="filter-select" id="filterCat" onchange="filterTable()">
+        <option value="">Toutes catégories</option>
+      </select>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Nom & Prénom</th>
+            <th>Poste</th>
+            <th>Service</th>
+            <th>Catégorie</th>
+            <th>Contrat</th>
+            <th>Ancienneté</th>
+            <th>Salaire brut</th>
+            <th>Bonus annuel</th>
+            <th>Évaluation</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span>Clinique Saint-Lucas Médical · Dashboard RH <span id="version">v2.0 — Live</span></span>
+    <span>Mis à jour le <span id="dateNow"></span> · <a href="#">Usage interne confidentiel</a></span>
+  </div>
+</main>
+
+<script>
+// ══════════════════════════════════════
+// CONFIG — ID du Google Sheet
+// ══════════════════════════════════════
+const SHEET_ID = '1EIFtoOrfN6_16n_KYVRRCkFGBXbKHiH-7NGRK27uAno';
+const GVIZ_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Base%20RH`;
+
+// ── Palettes ──
+const PALETTE = ['#1B4F8A','#2E74C0','#5B9BD5','#17A589','#E67E22','#5C6BC0','#C0392B','#8FBDE6','#F0A500'];
+const STAT_COLORS = {'CDI':'#17A589','CDD':'#E67E22','Stage':'#5C6BC0'};
+
+let allRows = [];
+let charts = {};
+
+// ══ Parse Google Visualization JSON ══
+function parseGviz(text) {
+  // Strip the google.visualization.Query.setResponse( ... ) wrapper
+  const json = JSON.parse(text.replace(/^[^{]*/, '').replace(/[^}]*$/, ''));
+  const cols = json.table.cols.map(c => c.label || c.id);
+  return json.table.rows.map(row => {
+    const obj = {};
+    cols.forEach((h, i) => {
+      const cell = row.c[i];
+      obj[h] = cell && cell.v !== null ? String(cell.v) : '';
+    });
+    return obj;
+  });
+}
+
+// ══ Column finder (flexible) ══
+function col(row, ...keys) {
+  for (const k of keys) {
+    for (const rk of Object.keys(row)) {
+      if (rk.toLowerCase().includes(k.toLowerCase())) return row[rk];
+    }
+  }
+  return '';
+}
+
+function num(v) { return parseFloat((v+'').replace(/\s/g,'').replace(',','.')) || 0; }
+function avg(arr) { return arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0; }
+function fmt(n)  { return Math.round(n).toLocaleString('fr-FR'); }
+
+// ══ Main load ══
+async function loadData() {
+  try {
+    const resp = await fetch(GVIZ_URL + '&t=' + Date.now());
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const text = await resp.text();
+    const parsed = parseGviz(text).filter(r => col(r,'Nom','nom'));
+    if (parsed.length === 0) throw new Error('Empty data');
+    allRows = parsed;
+    document.getElementById('errorBanner').style.display = 'none';
+    render(allRows);
+  } catch(e) {
+    console.warn('Google Sheets gviz fetch failed:', e);
+    document.getElementById('errorBanner').style.display = 'block';
+    allRows = DEMO_DATA;
+    render(allRows);
+  } finally {
+    setTimeout(() => {
+      document.getElementById('loader').classList.add('hidden');
+    }, 600);
+  }
+}
+
+function render(rows) {
+  updateKPIs(rows);
+  buildCharts(rows);
+  buildSalaryBars(rows);
+  buildPyramid(rows);
+  buildFilters(rows);
+  buildTable(rows);
+  document.getElementById('subtitle').textContent = `${rows.length} collaborateurs · Exercice 2025–2026`;
+  document.getElementById('dateNow').textContent = new Date().toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
+}
+
+// ══ KPIs ══
+function updateKPIs(rows) {
+  const salaires    = rows.map(r => num(col(r,'Salaire brut mensuel','salaire brut','salaire'))).filter(v=>v>0);
+  const anciennetes = rows.map(r => num(col(r,'Ancienneté','anciennete'))).filter(v=>v>=0);
+  const notes       = rows.map(r => num(col(r,'Note','évaluation','evaluation'))).filter(v=>v>0);
+  const bonus       = rows.map(r => num(col(r,'Bonus','bonus annuel'))).filter(v=>v>=0);
+
+  document.getElementById('k-effectif').textContent = rows.length;
+  document.getElementById('k-salaire').textContent  = fmt(avg(salaires)) + ' €';
+  document.getElementById('k-anciennete').textContent = avg(anciennetes).toFixed(1) + ' ans';
+  document.getElementById('k-note').textContent     = avg(notes).toFixed(1) + ' / 5';
+  document.getElementById('k-bonus').textContent    = fmt(avg(bonus)) + ' €';
+}
+
+// ══ Charts ══
+function buildCharts(rows) {
+  // Catégories
+  const catCount = {};
+  rows.forEach(r => {
+    const c = col(r,'Catégorie','categorie','cat') || 'Autre';
+    catCount[c] = (catCount[c]||0)+1;
+  });
+  const catSorted = Object.entries(catCount).sort((a,b)=>b[1]-a[1]);
+
+  if (charts.cat) charts.cat.destroy();
+  charts.cat = new Chart(document.getElementById('chartCat'), {
+    type:'bar',
+    data:{
+      labels: catSorted.map(e=>e[0]),
+      datasets:[{data:catSorted.map(e=>e[1]), backgroundColor:PALETTE, borderRadius:6, borderSkipped:false}]
+    },
+    options:{
+      indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>` ${c.raw} personnes`}}},
+      scales:{
+        x:{grid:{color:'#EEF3FA'}, ticks:{font:{family:'DM Sans',size:11},color:'#8FA3BC'}},
+        y:{grid:{display:false}, ticks:{font:{family:'DM Sans',size:12},color:'#4A6080'}}
+      }
+    }
+  });
+
+  // Statuts
+  const statCount = {};
+  rows.forEach(r => {
+    const s = col(r,'Statut','statut','contrat') || 'CDI';
+    statCount[s] = (statCount[s]||0)+1;
+  });
+  const statLabels = Object.keys(statCount);
+  const statVals   = Object.values(statCount);
+  const total      = statVals.reduce((a,b)=>a+b,0);
+  const statColors = statLabels.map(l => STAT_COLORS[l] || '#8FBDE6');
+
+  if (charts.statut) charts.statut.destroy();
+  charts.statut = new Chart(document.getElementById('chartStatut'), {
+    type:'doughnut',
+    data:{labels:statLabels, datasets:[{data:statVals, backgroundColor:statColors, borderWidth:0, hoverOffset:6}]},
+    options:{responsive:true, maintainAspectRatio:false, cutout:'72%', plugins:{legend:{display:false}}}
+  });
+
+  const legWrap = document.getElementById('legStatut');
+  legWrap.innerHTML = '';
+  statLabels.forEach((l,i) => {
+    const pct = Math.round(statVals[i]/total*100);
+    legWrap.innerHTML += `<div class="dleg">
+      <div class="dleg-dot" style="background:${statColors[i]}"></div>
+      <span class="dleg-lbl">${l}</span>
+      <span class="dleg-val">${statVals[i]}</span>
+      <span class="dleg-pct">${pct}%</span>
+    </div>`;
+  });
+}
+
+// ══ Salary bars ══
+function buildSalaryBars(rows) {
+  const serviceMap = {};
+  rows.forEach(r => {
+    const svc = col(r,'Service','service') || 'Autre';
+    const sal = num(col(r,'Salaire brut mensuel','salaire'));
+    if (!serviceMap[svc]) serviceMap[svc] = [];
+    if (sal > 0) serviceMap[svc].push(sal);
+  });
+  const sorted = Object.entries(serviceMap)
+    .filter(([,v])=>v.length>0)
+    .map(([k,v])=>[k, Math.round(avg(v))])
+    .sort((a,b)=>b[1]-a[1]).slice(0,10);
+
+  const maxSal = sorted[0]?.[1] || 1;
+  const wrap = document.getElementById('salList');
+  wrap.innerHTML = '';
+  sorted.forEach(([name,val]) => {
+    wrap.innerHTML += `<div class="sal-row">
+      <div class="sal-meta"><span class="sal-name">${name}</span><span class="sal-amt">${val.toLocaleString('fr-FR')} €</span></div>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.round(val/maxSal*100)}%"></div></div>
+    </div>`;
+  });
+}
+
+// ══ Pyramid ══
+function buildPyramid(rows) {
+  const tranches = [
+    {lbl:'60–65', min:60, max:65},
+    {lbl:'55–59', min:55, max:59},
+    {lbl:'50–54', min:50, max:54},
+    {lbl:'45–49', min:45, max:49},
+    {lbl:'40–44', min:40, max:44},
+    {lbl:'35–39', min:35, max:39},
+    {lbl:'30–34', min:30, max:34},
+    {lbl:'25–29', min:25, max:29},
+    {lbl:'22–24', min:22, max:24},
+  ];
+  const pyramid = tranches.map(t => {
+    const inRange = rows.filter(r => {
+      const age = num(col(r,'Âge','age'));
+      return age>=t.min && age<=t.max;
+    });
+    const f = inRange.filter(r=>col(r,'Genre','genre').toLowerCase().includes('f')).length;
+    const m = inRange.length - f;
+    return {...t, f, m, total:inRange.length};
+  });
+  const maxPy = Math.max(...pyramid.map(r=>r.total), 1);
+  const wrap = document.getElementById('pyramid');
+  wrap.innerHTML = '';
+  pyramid.forEach(row => {
+    const wF = Math.round(row.f/maxPy*100);
+    const wM = Math.round(row.m/maxPy*100);
+    wrap.innerHTML += `<div class="py-row">
+      <span class="py-lbl">${row.lbl}</span>
+      <div class="py-bars">
+        <div class="py-side" style="justify-content:flex-end"><div class="py-f" style="width:${wF}%"></div></div>
+        <div style="width:5px"></div>
+        <div class="py-side"><div class="py-m" style="width:${wM}%"></div></div>
+      </div>
+      <span class="py-count">${row.total}</span>
+    </div>`;
+  });
+}
+
+// ══ Table & filters ══
+function buildFilters(rows) {
+  const cats = [...new Set(rows.map(r=>col(r,'Catégorie','categorie')).filter(Boolean))].sort();
+  const sel = document.getElementById('filterCat');
+  sel.innerHTML = '<option value="">Toutes catégories</option>';
+  cats.forEach(c => sel.innerHTML += `<option>${c}</option>`);
+}
+
+function filterTable() {
+  const q   = document.getElementById('searchInput').value.toLowerCase();
+  const st  = document.getElementById('filterStatut').value;
+  const cat = document.getElementById('filterCat').value;
+  const filtered = allRows.filter(r => {
+    const txt = Object.values(r).join(' ').toLowerCase();
+    const statut = col(r,'Statut','statut');
+    const categorie = col(r,'Catégorie','categorie');
+    return (!q || txt.includes(q))
+      && (!st  || statut === st)
+      && (!cat || categorie === cat);
+  });
+  renderTable(filtered);
+}
+
+function buildTable(rows) { renderTable(rows); }
+
+function renderTable(rows) {
+  document.getElementById('tableCount').textContent = `${rows.length} collaborateur${rows.length>1?'s':''} affiché${rows.length>1?'s':''}`;
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = '';
+  rows.slice(0,50).forEach(r => {
+    const nom      = (col(r,'Nom','nom')||'') + ' ' + (col(r,'Prénom','prenom')||'');
+    const poste    = col(r,'Poste','poste','titre');
+    const service  = col(r,'Service','service');
+    const categorie= col(r,'Catégorie','categorie');
+    const statut   = col(r,'Statut','statut','contrat') || 'CDI';
+    const anciennete = col(r,'Ancienneté','anciennete');
+    const sal      = num(col(r,'Salaire brut mensuel','salaire brut','salaire'));
+    const bonus    = num(col(r,'Bonus annuel','bonus'));
+    const note     = num(col(r,'Note','évaluation','evaluation'));
+    const chipCls  = statut==='CDI'?'c-cdi':statut==='CDD'?'c-cdd':'c-stage';
+    const stars    = note>0 ? '★'.repeat(Math.round(note))+'☆'.repeat(5-Math.round(note)) : '—';
+    tbody.innerHTML += `<tr>
+      <td>${nom.trim()}</td>
+      <td>${poste}</td>
+      <td>${service}</td>
+      <td>${categorie}</td>
+      <td><span class="chip ${chipCls}">${statut}</span></td>
+      <td>${anciennete ? anciennete+' ans' : '—'}</td>
+      <td>${sal>0?sal.toLocaleString('fr-FR')+' €':'—'}</td>
+      <td>${bonus>0?bonus.toLocaleString('fr-FR')+' €':'—'}</td>
+      <td><span class="stars" style="font-size:11px">${stars}</span>${note>0?` <small style="color:#8FA3BC">${note}</small>`:''}</td>
+    </tr>`;
+  });
+  if(rows.length>50){
+    tbody.innerHTML+=`<tr><td colspan="9" style="text-align:center;padding:14px;color:var(--text-muted);font-size:12px">… et ${rows.length-50} autres collaborateurs (affinez la recherche pour voir plus)</td></tr>`;
+  }
+}
+
+// ══ Demo data fallback ══
+const DEMO_DATA = Array.from({length:120},(_,i)=>({
+  'Nom': ['MARTIN','BERNARD','DUBOIS','THOMAS','ROBERT','GARCIA','LEROY','MOREAU','SIMON','FOURNIER'][i%10],
+  'Prénom': ['Sophie','Nicolas','Claire','Julien','Isabelle','Hugo','Camille','Lucie','Baptiste','Marc'][i%10],
+  'Catégorie': ['Médecin','Infirmier','Aide-soignant','Cadre de santé','Administratif','Pharmacie','Kiné/Para','Technique','Direction'][i%9],
+  'Poste': ['Cardiologue','Infirmier DE','Aide-Soignant','Cadre de Santé','Secrétaire Médicale','Pharmacien','Kinésithérapeute','Technicien Bio','Directeur Médical'][i%9],
+  'Service': ['Cardiologie','Urgences','Réanimation','Pédiatrie','Administration','Pharmacie','Neurologie','Maintenance','Direction Médicale'][i%9],
+  'Statut': i%10<7?'CDI':i%10<9?'CDD':'Stage',
+  'Genre': i%3===0?'Femme':'Homme',
+  'Âge': 25+((i*7)%38),
+  "Ancienneté (ans)": (i*3)%20,
+  "Salaire brut mensuel (€)": [7500,2800,2000,4300,2400,4800,3200,2900,10000][i%9]+((i*50)%300),
+  "Bonus annuel (€)": [800,80,40,180,70,400,130,60,1200][i%9],
+  "Note d'évaluation (/5)": (3.2+((i*0.17)%1.8)).toFixed(1),
+}));
+
+// ── Init ──
+loadData();
+</script>
+</body>
+</html>
